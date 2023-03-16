@@ -1,0 +1,325 @@
+apiVersion: v1
+items:
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: grafana
+      name: grafana
+    spec:
+      ports:
+        - name: "3000"
+          port: 3000
+          targetPort: 3000
+      selector:
+        io.kompose.service: grafana
+    status:
+      loadBalancer: {}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: prometheus
+      name: prometheus
+    spec:
+      ports:
+        - name: "9090"
+          port: 9090
+          targetPort: 9090
+      selector:
+        io.kompose.service: prometheus
+    status:
+      loadBalancer: {}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: zipkin
+      name: zipkin
+    spec:
+      type: LoadBalancer
+      ports:
+        - name: "9411"
+          port: 9411
+          targetPort: 9411
+      selector:
+        io.kompose.service: zipkin
+    status:
+      loadBalancer: {}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: dependencies
+      name: dependencies
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          io.kompose.service: dependencies
+      strategy: {}
+      template:
+        metadata:
+          annotations:
+            kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+            kompose.version: 1.22.0 (955b78124)
+          creationTimestamp: null
+          labels:
+            io.kompose.service: dependencies
+        spec:
+          containers:
+            - command:
+                - crond
+                - -f
+              env:
+                - name: MYSQL_HOST
+                  value: mysql
+                - name: MYSQL_PASS
+                  value: zipkin
+                - name: MYSQL_USER
+                  value: zipkin
+                - name: STORAGE_TYPE
+                  value: mysql
+              image: openzipkin/zipkin-dependencies
+              name: dependencies
+              resources: {}
+          restartPolicy: Always
+    status: {}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: grafana
+      name: grafana
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          io.kompose.service: grafana
+      strategy: {}
+      template:
+        metadata:
+          annotations:
+            kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+            kompose.version: 1.22.0 (955b78124)
+          creationTimestamp: null
+          labels:
+            io.kompose.service: grafana
+        spec:
+          containers:
+            - env:
+                - name: GF_AUTH_ANONYMOUS_ENABLED
+                  value: "true"
+                - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+                  value: Admin
+              image: grafana/grafana
+              name: grafana
+              ports:
+                - containerPort: 3000
+              resources: {}
+          restartPolicy: Always
+    status: {}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: prometheus
+      name: prometheus
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          io.kompose.service: prometheus
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          annotations:
+            kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+            kompose.version: 1.22.0 (955b78124)
+          creationTimestamp: null
+          labels:
+            io.kompose.service: prometheus
+        spec:
+          containers:
+            - image: prom/prometheus
+              name: prometheus
+              ports:
+                - containerPort: 9090
+              resources: {}
+              volumeMounts:
+                - mountPath: /etc/prometheus/prometheus.yml
+                  name: prometheus-claim0
+          restartPolicy: Always
+          volumes:
+            - name: prometheus-claim0
+              persistentVolumeClaim:
+                claimName: prometheus-claim0
+    status: {}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: prometheus-claim0
+      name: prometheus-claim0
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 100Mi
+    status: {}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: setup-grafana-datasource
+      name: setup-grafana-datasource
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          io.kompose.service: setup-grafana-datasource
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          annotations:
+            kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+            kompose.version: 1.22.0 (955b78124)
+          creationTimestamp: null
+          labels:
+            io.kompose.service: setup-grafana-datasource
+        spec:
+          containers:
+            - args:
+                - /create.sh
+              image: appropriate/curl
+              name: setup-grafana-datasource
+              resources: {}
+              volumeMounts:
+                - mountPath: /create.sh
+                  name: setup-grafana-datasource-claim0
+                  readOnly: true
+          restartPolicy: Always
+          volumes:
+            - name: setup-grafana-datasource-claim0
+              persistentVolumeClaim:
+                claimName: setup-grafana-datasource-claim0
+                readOnly: true
+    status: {}
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: setup-grafana-datasource-claim0
+      name: setup-grafana-datasource-claim0
+    spec:
+      accessModes:
+        - ReadOnlyMany
+      resources:
+        requests:
+          storage: 100Mi
+    status: {}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: storage
+      name: storage
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          io.kompose.service: storage
+      strategy: {}
+      template:
+        metadata:
+          annotations:
+            kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+            kompose.version: 1.22.0 (955b78124)
+          creationTimestamp: null
+          labels:
+            io.kompose.service: storage
+        spec:
+          containers:
+            - image: openzipkin/zipkin-mysql
+              name: mysql
+              resources: {}
+          restartPolicy: Always
+    status: {}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: zipkin
+      name: zipkin
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          io.kompose.service: zipkin
+      strategy: {}
+      template:
+        metadata:
+          annotations:
+            kompose.cmd: kompose convert -f docker-compose.yml -o k8-manifests.yml
+            kompose.version: 1.22.0 (955b78124)
+          creationTimestamp: null
+          labels:
+            io.kompose.service: zipkin
+        spec:
+          containers:
+            - env:
+                - name: MYSQL_HOST
+                  value: mysql
+                - name: STORAGE_TYPE
+                  value: mysql
+              image: openzipkin/zipkin
+              name: zipkin
+              ports:
+                - containerPort: 9411
+              resources: {}
+          restartPolicy: Always
+    status: {}
+kind: List
+metadata: {}
+

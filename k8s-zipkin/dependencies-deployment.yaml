@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert
+    kompose.version: 1.22.0 (955b78124)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: dependencies
+  name: dependencies
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: dependencies
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose convert
+        kompose.version: 1.22.0 (955b78124)
+      creationTimestamp: null
+      labels:
+        io.kompose.service: dependencies
+    spec:
+      containers:
+        - command:
+            - crond
+            - -f
+          env:
+            - name: MYSQL_HOST
+              value: mysql
+            - name: MYSQL_PASS
+              value: zipkin
+            - name: MYSQL_USER
+              value: zipkin
+            - name: STORAGE_TYPE
+              value: mysql
+          image: openzipkin/zipkin-dependencies
+          name: dependencies
+          resources: {}
+      restartPolicy: Always
+status: {}
